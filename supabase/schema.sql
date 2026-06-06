@@ -4,6 +4,9 @@ create table if not exists public.movies (
   title text not null,
   url text not null,
   version text not null default 'CAM' check (version in ('CAM', 'ENG', 'PL_NAPISY', 'POLSKI')),
+  added_by_id text,
+  added_by_email text,
+  added_by_name text,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -55,7 +58,9 @@ select
   title,
   version,
   created_at,
-  updated_at
+  updated_at,
+  added_by_name,
+  added_by_email
 from public.movies;
 
 grant select on public.movies_public_list to anon, authenticated;

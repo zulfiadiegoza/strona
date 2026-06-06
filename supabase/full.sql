@@ -22,13 +22,19 @@ update public.movies
   set version = 'PL_NAPISY'
   where version = 'ENG_NAPISY';
 
--- 4. Ograniczenie dozwolonych wersji
+-- 4. Kolumny autora (kto dodał film)
+alter table public.movies
+  add column if not exists added_by_id text,
+  add column if not exists added_by_email text,
+  add column if not exists added_by_name text;
+
+-- 5. Ograniczenie dozwolonych wersji
 alter table public.movies drop constraint if exists movies_version_check;
 alter table public.movies
   add constraint movies_version_check
   check (version in ('CAM', 'ENG', 'PL_NAPISY', 'POLSKI'));
 
--- 5. Automatyczna aktualizacja updated_at przy edycji
+-- 6. Automatyczna aktualizacja updated_at przy edycji
 create or replace function public.update_updated_at_column()
 returns trigger as $$
 begin
@@ -43,7 +49,7 @@ create trigger update_movies_updated_at
   for each row
   execute function public.update_updated_at_column();
 
--- 6. Row Level Security (RLS)
+-- 7. Row Level Security (RLS)
 alter table public.movies enable row level security;
 
 -- Odczyt — publiczny (bot Discord + strona)
@@ -71,14 +77,16 @@ create policy "Authenticated users can delete movies"
   to authenticated
   using (true);
 
--- 7. Widok publiczny (bez url) dla strony /lista
+-- 8. Widok publiczny (bez url) dla strony /lista
 create or replace view public.movies_public_list as
 select
   id,
   title,
   version,
   created_at,
-  updated_at
+  updated_at,
+  added_by_name,
+  added_by_email
 from public.movies;
 
 grant select on public.movies_public_list to anon, authenticated;

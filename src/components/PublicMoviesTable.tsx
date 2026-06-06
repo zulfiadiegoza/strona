@@ -2,6 +2,7 @@
 
 import VersionBadge from "@/components/VersionBadge";
 import { formatDate } from "@/lib/format-date";
+import { getAddedByDisplay } from "@/lib/movie-author";
 import { MoviePublic } from "@/types/movie-public";
 
 interface PublicMoviesTableProps {
@@ -42,9 +43,12 @@ export default function PublicMoviesTable({
                 Tytuł
               </th>
               <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden md:table-cell">
-                Dodano
+                Dodane przez
               </th>
               <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden lg:table-cell">
+                Dodano
+              </th>
+              <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden xl:table-cell">
                 Ostatnia edycja
               </th>
             </tr>
@@ -62,9 +66,12 @@ export default function PublicMoviesTable({
                   </div>
                 </td>
                 <td className="px-6 py-4 text-neutral-500 hidden md:table-cell">
-                  {formatDate(movie.created_at)}
+                  {getAddedByDisplay(movie)}
                 </td>
                 <td className="px-6 py-4 text-neutral-500 hidden lg:table-cell">
+                  {formatDate(movie.created_at)}
+                </td>
+                <td className="px-6 py-4 text-neutral-500 hidden xl:table-cell">
                   {formatDate(movie.updated_at)}
                 </td>
               </tr>

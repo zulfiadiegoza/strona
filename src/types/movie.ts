@@ -5,6 +5,9 @@ export interface Movie {
   title: string;
   url: string;
   version: MovieVersion;
+  added_by_id: string | null;
+  added_by_email: string | null;
+  added_by_name: string | null;
   created_at: string;
   updated_at: string;
 }

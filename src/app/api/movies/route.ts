@@ -1,8 +1,18 @@
 import { requireAuth } from "@/lib/auth";
+import { sendMovieAddedWebhook } from "@/lib/discord-webhook";
 import { isValidVersion } from "@/lib/movie-version";
+import { getAuthorFromUser } from "@/lib/movie-author";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+
+function getSiteUrl(request: NextRequest): string | undefined {
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (!host) return undefined;
+  const proto = request.headers.get("x-forwarded-proto") || "https";
+  return `${proto}://${host}`;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,8 +51,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { error: authError } = await requireAuth();
-  if (authError) return authError;
+  const { user, error: authError } = await requireAuth();
+  if (authError || !user) return authError;
 
   try {
     const body = await request.json();
@@ -61,16 +71,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nieprawidłowa wersja" }, { status: 400 });
     }
 
+    const author = getAuthorFromUser(user);
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("movies")
-      .insert({ title, url, version })
+      .insert({ title, url, version, ...author })
       .select()
       .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    const siteUrl = getSiteUrl(request);
+    void sendMovieAddedWebhook(data, user, {
+      listaUrl: siteUrl ? `${siteUrl}/lista` : undefined,
+    });
 
     return NextResponse.json(data, { status: 201 });
   } catch {

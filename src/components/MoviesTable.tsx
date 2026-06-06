@@ -2,6 +2,7 @@
 
 import VersionBadge from "@/components/VersionBadge";
 import { formatDate } from "@/lib/format-date";
+import { getAddedByDisplay } from "@/lib/movie-author";
 import { Movie } from "@/types/movie";
 
 interface MoviesTableProps {
@@ -48,6 +49,9 @@ export default function MoviesTable({
               <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden md:table-cell">
                 Link
               </th>
+              <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden md:table-cell">
+                Dodane przez
+              </th>
               <th className="text-left px-6 py-4 font-medium text-neutral-400 hidden lg:table-cell">
                 Utworzono
               </th>
@@ -77,6 +81,9 @@ export default function MoviesTable({
                   >
                     {movie.url}
                   </a>
+                </td>
+                <td className="px-6 py-4 text-neutral-500 hidden md:table-cell">
+                  {getAddedByDisplay(movie)}
                 </td>
                 <td className="px-6 py-4 text-neutral-500 hidden lg:table-cell">
                   {formatDate(movie.created_at)}
