@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { sendMovieAddedWebhook } from "@/lib/discord-webhook";
-import { isValidVersion } from "@/lib/movie-version";
+import { isValidVersion, parseMovieVersions } from "@/lib/movie-version";
 import { getAuthorFromUser } from "@/lib/movie-author";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (search) {
-      query = query.ilike("title", `%${search}%`);
+      query = query.or(`title.ilike.%${search}%,subtitle.ilike.%${search}%`);
     }
 
     if (version) {
-      query = query.eq("version", version);
+      query = query.contains("versions", [version]);
     }
 
     const { data, error } = await query;
@@ -57,8 +57,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const title = body.title?.trim();
+    const subtitle =
+      typeof body.subtitle === "string" ? body.subtitle.trim() : "";
     const url = body.url?.trim();
-    const version = body.version?.trim() || "CAM";
+    const versions = parseMovieVersions(body.versions ?? body.version);
 
     if (!title || !url) {
       return NextResponse.json(
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isValidVersion(version)) {
+    if (!versions) {
       return NextResponse.json({ error: "Nieprawidłowa wersja" }, { status: 400 });
     }
 
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("movies")
-      .insert({ title, url, version, ...author })
+      .insert({ title, subtitle: subtitle || null, url, versions, ...author })
       .select()
       .single();
 

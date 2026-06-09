@@ -1,7 +1,11 @@
 "use client";
 
 import VersionBadge from "@/components/VersionBadge";
-import { MOVIE_VERSIONS, MovieVersion } from "@/lib/movie-version";
+import {
+  getMovieVersions,
+  MOVIE_VERSIONS,
+  MovieVersion,
+} from "@/lib/movie-version";
 import { Movie, MovieFormData } from "@/types/movie";
 import { FormEvent, useState } from "react";
 
@@ -19,8 +23,11 @@ export default function MovieModal({
   movie,
 }: MovieModalProps) {
   const [title, setTitle] = useState(movie?.title ?? "");
+  const [subtitle, setSubtitle] = useState(movie?.subtitle ?? "");
   const [url, setUrl] = useState(movie?.url ?? "");
-  const [version, setVersion] = useState<MovieVersion>(movie?.version ?? "CAM");
+  const [versions, setVersions] = useState<MovieVersion[]>(
+    getMovieVersions(movie ?? {})
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -29,16 +36,35 @@ export default function MovieModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (versions.length === 0) {
+      setError("Wybierz przynajmniej jedna wersje");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await onSave({ title: title.trim(), url: url.trim(), version });
+      await onSave({
+        title: title.trim(),
+        subtitle: subtitle.trim() || null,
+        url: url.trim(),
+        versions,
+      });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Wystąpił błąd");
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleVersion(version: MovieVersion) {
+    setVersions((current) =>
+      current.includes(version)
+        ? current.filter((item) => item !== version)
+        : [...current, version]
+    );
   }
 
   if (!isOpen) return null;
@@ -75,23 +101,48 @@ export default function MovieModal({
           </div>
 
           <div>
+            <label
+              htmlFor="subtitle"
+              className="block text-sm font-medium text-neutral-300 mb-2"
+            >
+              Podtytul / inne nazwy
+            </label>
+            <input
+              id="subtitle"
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-black border border-white/10 text-white placeholder-neutral-500 focus:border-white/30 transition-colors"
+              placeholder="np. Attack on Titan, AOT"
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-neutral-300 mb-2">
               Wersja
             </label>
             <div className="flex flex-wrap gap-2">
               {MOVIE_VERSIONS.map((v) => (
-                <button
+                <label
                   key={v}
-                  type="button"
-                  onClick={() => setVersion(v)}
-                  className={`rounded-lg transition-all ${
-                    version === v
-                      ? "ring-2 ring-white/50 scale-105"
-                      : "opacity-60 hover:opacity-100"
-                  }`}
+                  className="cursor-pointer rounded-lg transition-all"
                 >
-                  <VersionBadge version={v} size="md" />
-                </button>
+                  <input
+                    type="checkbox"
+                    checked={versions.includes(v)}
+                    onChange={() => toggleVersion(v)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`block rounded-lg transition-all ${
+                      versions.includes(v)
+                        ? "ring-2 ring-white/50 scale-105"
+                        : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <VersionBadge version={v} size="md" />
+                  </span>
+                </label>
               ))}
             </div>
           </div>

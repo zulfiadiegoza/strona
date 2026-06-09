@@ -3,6 +3,7 @@
 import VersionBadge from "@/components/VersionBadge";
 import { formatDate } from "@/lib/format-date";
 import { getAddedByDisplay } from "@/lib/movie-author";
+import { getMovieVersions } from "@/lib/movie-version";
 import { MoviePublic } from "@/types/movie-public";
 
 interface PublicMoviesTableProps {
@@ -60,9 +61,18 @@ export default function PublicMoviesTable({
                 className="border-b border-white/5 hover:bg-white/[0.02] transition-colors"
               >
                 <td className="px-6 py-4 font-medium">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span>{movie.title}</span>
-                    <VersionBadge version={movie.version ?? "CAM"} />
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{movie.title}</span>
+                      {getMovieVersions(movie).map((version) => (
+                        <VersionBadge key={version} version={version} />
+                      ))}
+                    </div>
+                    {movie.subtitle && (
+                      <p className="text-xs font-normal text-neutral-500">
+                        {movie.subtitle}
+                      </p>
+                    )}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-neutral-500 hidden md:table-cell">

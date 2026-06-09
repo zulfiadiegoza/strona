@@ -1,4 +1,4 @@
-import { getVersionLabel } from "@/lib/movie-version";
+import { getMovieVersions, getVersionLabel } from "@/lib/movie-version";
 import { getAddedByDisplay } from "@/lib/movie-author";
 import type { Movie } from "@/types/movie";
 import type { User } from "@supabase/supabase-js";
@@ -29,13 +29,17 @@ export async function sendMovieAddedWebhook(
     added_by_name: movie.added_by_name,
     added_by_email: movie.added_by_email ?? user.email,
   });
+  const versions = getMovieVersions(movie).map(getVersionLabel).join(", ");
 
   const embed: Record<string, unknown> = {
     title: "🎬 Dodano nowy film",
     color: 0xffffff,
     fields: [
       { name: "Tytuł", value: movie.title, inline: false },
-      { name: "Wersja", value: getVersionLabel(movie.version), inline: true },
+      ...(movie.subtitle
+        ? [{ name: "Inne nazwy", value: movie.subtitle, inline: false }]
+        : []),
+      { name: "Wersje", value: versions, inline: true },
       { name: "Dodał", value: addedBy, inline: true },
       {
         name: "Data",

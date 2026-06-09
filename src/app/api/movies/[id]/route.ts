@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth";
-import { isValidVersion } from "@/lib/movie-version";
+import { parseMovieVersions } from "@/lib/movie-version";
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -13,8 +13,10 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const body = await request.json();
     const title = body.title?.trim();
+    const subtitle =
+      typeof body.subtitle === "string" ? body.subtitle.trim() : "";
     const url = body.url?.trim();
-    const version = body.version?.trim() || "CAM";
+    const versions = parseMovieVersions(body.versions ?? body.version);
 
     if (!title || !url) {
       return NextResponse.json(
@@ -23,14 +25,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    if (!isValidVersion(version)) {
+    if (!versions) {
       return NextResponse.json({ error: "Nieprawidłowa wersja" }, { status: 400 });
     }
 
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("movies")
-      .update({ title, url, version })
+      .update({ title, subtitle: subtitle || null, url, versions })
       .eq("id", id)
       .select()
       .single();

@@ -2,8 +2,12 @@
 create table if not exists public.movies (
   id uuid default gen_random_uuid() primary key,
   title text not null,
+  subtitle text,
   url text not null,
-  version text not null default 'CAM' check (version in ('CAM', 'ENG', 'PL_NAPISY', 'POLSKI')),
+  versions text[] not null default array['CAM']::text[] check (
+    cardinality(versions) > 0
+    and versions <@ array['CAM', 'ENG', 'PL_NAPISY', 'POLSKI']::text[]
+  ),
   added_by_id text,
   added_by_email text,
   added_by_name text,
@@ -56,7 +60,8 @@ create or replace view public.movies_public_list as
 select
   id,
   title,
-  version,
+  subtitle,
+  versions,
   created_at,
   updated_at,
   added_by_name,

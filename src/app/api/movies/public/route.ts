@@ -20,11 +20,11 @@ export async function GET(request: NextRequest) {
       .order("updated_at", { ascending: false });
 
     if (search) {
-      query = query.ilike("title", `%${search}%`);
+      query = query.or(`title.ilike.%${search}%,subtitle.ilike.%${search}%`);
     }
 
     if (version) {
-      query = query.eq("version", version);
+      query = query.contains("versions", [version]);
     }
 
     const { data, error } = await query;

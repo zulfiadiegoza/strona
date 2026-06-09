@@ -25,7 +25,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Szukaj po tytule..."
+        placeholder="Szukaj po tytule lub innej nazwie..."
         className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-black border border-white/10 text-white placeholder-neutral-500 focus:border-white/30 transition-colors text-sm"
       />
     </div>

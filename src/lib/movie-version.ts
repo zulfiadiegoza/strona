@@ -1,5 +1,6 @@
 export const MOVIE_VERSIONS = ["CAM", "ENG", "PL_NAPISY", "POLSKI"] as const;
 export type MovieVersion = (typeof MOVIE_VERSIONS)[number];
+export const DEFAULT_MOVIE_VERSIONS: MovieVersion[] = ["CAM"];
 
 export const VERSION_LABELS: Record<MovieVersion, string> = {
   CAM: "CAM",
@@ -19,6 +20,40 @@ export const VERSION_STYLES: Record<MovieVersion, string> = {
 
 export function isValidVersion(value: string): value is MovieVersion {
   return MOVIE_VERSIONS.includes(value as MovieVersion);
+}
+
+function uniqueVersions(versions: MovieVersion[]): MovieVersion[] {
+  return versions.filter((version, index) => versions.indexOf(version) === index);
+}
+
+export function parseMovieVersions(value: unknown): MovieVersion[] | null {
+  const rawValues = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? [value]
+      : value == null
+        ? []
+        : [value];
+
+  const versions = rawValues
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+
+  if (versions.length === 0) return [...DEFAULT_MOVIE_VERSIONS];
+  if (!versions.every(isValidVersion)) return null;
+
+  return uniqueVersions(versions as MovieVersion[]);
+}
+
+export function getMovieVersions(movie: {
+  versions?: readonly string[] | null;
+  version?: string | null;
+}): MovieVersion[] {
+  if (Array.isArray(movie.versions) && movie.versions.length > 0) {
+    return parseMovieVersions(movie.versions) ?? [...DEFAULT_MOVIE_VERSIONS];
+  }
+
+  return parseMovieVersions(movie.version) ?? [...DEFAULT_MOVIE_VERSIONS];
 }
 
 export function getVersionLabel(version: string): string {
