@@ -80,10 +80,13 @@ create trigger update_movies_updated_at
 -- 8. Row Level Security (RLS)
 alter table public.movies enable row level security;
 
--- Odczyt publiczny (bot Discord + strona)
+-- Odczyt pelnej tabeli tylko dla zalogowanych. Bot korzysta z API strony
+-- zabezpieczonego MOVIE_API_TOKEN, a publiczna lista idzie przez widok bez URL.
 drop policy if exists "Movies are viewable by everyone" on public.movies;
-create policy "Movies are viewable by everyone"
+drop policy if exists "Authenticated users can view movies" on public.movies;
+create policy "Authenticated users can view movies"
   on public.movies for select
+  to authenticated
   using (true);
 
 -- Zapis tylko dla zalogowanych uzytkownikow

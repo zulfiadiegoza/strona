@@ -2,9 +2,46 @@ import { requireAuth } from "@/lib/auth";
 import { sendMovieAddedWebhook } from "@/lib/discord-webhook";
 import { isValidVersion, parseMovieVersions } from "@/lib/movie-version";
 import { getAuthorFromUser } from "@/lib/movie-author";
-import { createAnonClient } from "@/lib/supabase/anon";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
+
+function hasValidMovieApiToken(request: NextRequest): boolean {
+  const apiToken = process.env.MOVIE_API_TOKEN?.trim();
+  if (!apiToken) return false;
+
+  const apiKey = request.headers.get("x-api-key")?.trim();
+  const authHeader = request.headers.get("authorization")?.trim();
+  const bearerToken = authHeader?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+
+  return apiKey === apiToken || bearerToken === apiToken;
+}
+
+async function getPrivateMoviesClient(request: NextRequest) {
+  if (hasValidMovieApiToken(request)) {
+    return {
+      supabase: createServiceClient(),
+      error: null,
+    };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      supabase: null,
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  return {
+    supabase,
+    error: null,
+  };
+}
 
 function getSiteUrl(request: NextRequest): string | undefined {
   const host =
@@ -16,6 +53,16 @@ function getSiteUrl(request: NextRequest): string | undefined {
 
 export async function GET(request: NextRequest) {
   try {
+    const { supabase, error: authError } = await getPrivateMoviesClient(request);
+    if (authError) return authError;
+
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Brakuje konfiguracji SUPABASE_SERVICE_ROLE_KEY" },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim();
     const version = searchParams.get("version")?.trim();
@@ -24,7 +71,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Nieprawidłowa wersja" }, { status: 400 });
     }
 
-    const supabase = createAnonClient();
     let query = supabase
       .from("movies")
       .select("*")
