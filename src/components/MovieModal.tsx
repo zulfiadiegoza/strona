@@ -7,13 +7,26 @@ import {
   MovieVersion,
 } from "@/lib/movie-version";
 import { Movie, MovieFormData } from "@/types/movie";
-import { FormEvent, useState } from "react";
+import { FormEvent, KeyboardEvent, useState } from "react";
 
 interface MovieModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: MovieFormData) => Promise<void>;
   movie?: Movie | null;
+}
+
+function splitSubtitleAliases(value?: string | null): string[] {
+  return String(value ?? "")
+    .split(/[,;/|\n]+/)
+    .map((alias) => alias.trim())
+    .filter(Boolean)
+    .filter(
+      (alias, index, aliases) =>
+        aliases.findIndex(
+          (item) => item.toLowerCase() === alias.toLowerCase()
+        ) === index
+    );
 }
 
 export default function MovieModal({
@@ -23,7 +36,10 @@ export default function MovieModal({
   movie,
 }: MovieModalProps) {
   const [title, setTitle] = useState(movie?.title ?? "");
-  const [subtitle, setSubtitle] = useState(movie?.subtitle ?? "");
+  const [aliases, setAliases] = useState<string[]>(
+    splitSubtitleAliases(movie?.subtitle)
+  );
+  const [aliasInput, setAliasInput] = useState("");
   const [url, setUrl] = useState(movie?.url ?? "");
   const [versions, setVersions] = useState<MovieVersion[]>(
     getMovieVersions(movie ?? {})
@@ -45,9 +61,17 @@ export default function MovieModal({
     setLoading(true);
 
     try {
+      const submittedAliases = [...aliases];
+      splitSubtitleAliases(aliasInput).forEach((alias) => {
+        const alreadyAdded = submittedAliases.some(
+          (item) => item.toLowerCase() === alias.toLowerCase()
+        );
+        if (!alreadyAdded) submittedAliases.push(alias);
+      });
+
       await onSave({
         title: title.trim(),
-        subtitle: subtitle.trim() || null,
+        subtitle: submittedAliases.join(", ") || null,
         url: url.trim(),
         versions,
       });
@@ -65,6 +89,37 @@ export default function MovieModal({
         ? current.filter((item) => item !== version)
         : [...current, version]
     );
+  }
+
+  function addAliases(value = aliasInput) {
+    const nextAliases = splitSubtitleAliases(value);
+    if (nextAliases.length === 0) return;
+
+    setAliases((current) => {
+      const seen = new Set(current.map((alias) => alias.toLowerCase()));
+      const uniqueNextAliases = nextAliases.filter((alias) => {
+        const key = alias.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      return [...current, ...uniqueNextAliases];
+    });
+    setAliasInput("");
+  }
+
+  function removeAlias(aliasToRemove: string) {
+    setAliases((current) =>
+      current.filter((alias) => alias !== aliasToRemove)
+    );
+  }
+
+  function handleAliasKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+
+    e.preventDefault();
+    addAliases();
   }
 
   if (!isOpen) return null;
@@ -102,19 +157,50 @@ export default function MovieModal({
 
           <div>
             <label
-              htmlFor="subtitle"
+              htmlFor="alias"
               className="block text-sm font-medium text-neutral-300 mb-2"
             >
-              Podtytul / inne nazwy
+              Inne nazwy
             </label>
-            <input
-              id="subtitle"
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-black border border-white/10 text-white placeholder-neutral-500 focus:border-white/30 transition-colors"
-              placeholder="np. Attack on Titan, AOT"
-            />
+            <div className="flex gap-2">
+              <input
+                id="alias"
+                type="text"
+                value={aliasInput}
+                onChange={(e) => setAliasInput(e.target.value)}
+                onKeyDown={handleAliasKeyDown}
+                className="min-w-0 flex-1 px-4 py-3 rounded-xl bg-black border border-white/10 text-white placeholder-neutral-500 focus:border-white/30 transition-colors"
+                placeholder="np. AOT"
+              />
+              <button
+                type="button"
+                onClick={() => addAliases()}
+                className="px-4 py-3 rounded-xl border border-white/10 text-neutral-300 hover:border-white/30 hover:text-white transition-all text-sm font-medium"
+              >
+                Dodaj
+              </button>
+            </div>
+
+            {aliases.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {aliases.map((alias) => (
+                  <span
+                    key={alias}
+                    className="inline-flex max-w-full items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-neutral-200"
+                  >
+                    <span className="truncate">{alias}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAlias(alias)}
+                      className="text-neutral-500 hover:text-white transition-colors"
+                      aria-label={`Usun ${alias}`}
+                    >
+                      x
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
