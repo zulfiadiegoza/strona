@@ -9,6 +9,7 @@ interface WebhookOptions {
 
 function formatWebhookDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString("pl-PL", {
+    timeZone: "Europe/Warsaw",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
